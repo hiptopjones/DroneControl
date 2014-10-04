@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -38,7 +39,10 @@ namespace DroneControl
             lock (_sequenceLock)
             {
                 SequenceId++;
-                return string.Format("AT*{0}={1},{2}\r", commandName, SequenceId, string.Join(",", arguments));
+                string command = string.Format("AT*{0}={1},{2}\r", commandName, SequenceId, string.Join(",", arguments));
+
+                Debug.WriteLine(command);
+                return command;
             }
         }
 
@@ -51,6 +55,11 @@ namespace DroneControl
             takeOffArgument |= (1 << 24);  // Reserved (required)
             takeOffArgument |= (1 << 28);  // Reserved (required)
             return takeOffArgument;
+        }
+
+        public string Quote(string text)
+        {
+            return "\"" + text + "\"";
         }
     }
 }
