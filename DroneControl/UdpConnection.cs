@@ -34,39 +34,76 @@ using Windows.Networking.Connectivity;
 
 namespace DroneControl
 {
-    class ControlConnection : IControlConnection
+    public class UdpConnection
     {
-        private const int ControlPort = 5556;
-        private UdpConnection TransportConnection { get; set; }
+        private DatagramSocket UdpSocket { get; set; }
+        private DataWriter UdpWriter { get; set; }
+
+        private HostName HostName { get; set; }
+        private int Port { get; set; }
 
         public bool IsConnected
         {
             get
             {
-                return TransportConnection.IsConnected;
+                return UdpSocket != null && UdpWriter != null;
             }
         }
 
-        public ControlConnection(string ipAddress)
+        public Action<byte[]> MessageReceivedHandler { get; set; }
+
+        public UdpConnection(string hostName, int port)
         {
-            TransportConnection = new UdpConnection(ipAddress, ControlPort);
+            HostName = new HostName(hostName);
+            Port = port;
         }
 
         public async Task Connect()
         {
-            await TransportConnection.Connect();
+            string port = Port.ToString();
+
+            UdpSocket = new DatagramSocket();
+            UdpSocket.MessageReceived += OnMessageReceived;
+
+            await UdpSocket.BindServiceNameAsync(port);
+            await UdpSocket.ConnectAsync(HostName, port);
+
+            UdpWriter = new DataWriter(UdpSocket.OutputStream);
         }
 
-        public async Task SendCommand(string command)
+        public async Task Send(byte[] data)
         {
-            // These commands are ASCII, so UTF8 suffices
-            byte[] bytes = Encoding.UTF8.GetBytes(command);
-            await TransportConnection.Send(bytes);
+            UdpWriter.WriteBytes(data);
+            await UdpWriter.StoreAsync();
         }
 
         public void Close()
         {
-            TransportConnection.Close();
+            if (UdpWriter != null)
+            {
+                UdpWriter.Dispose();
+                UdpWriter = null;
+            }
+
+            if (UdpSocket != null)
+            {
+                UdpSocket.Dispose();
+                UdpSocket = null;
+            }
+        }
+
+        void OnMessageReceived(DatagramSocket sender, DatagramSocketMessageReceivedEventArgs args)
+        {
+            if (MessageReceivedHandler != null)
+            {
+                DataReader reader = args.GetDataReader();
+                uint length = reader.UnconsumedBufferLength;
+
+                byte[] buffer = new byte[length];
+                reader.ReadBytes(buffer);
+
+                MessageReceivedHandler(buffer);
+            }
         }
     }
 }

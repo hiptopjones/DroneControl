@@ -14,7 +14,9 @@ namespace DroneControl
 {
     public partial class MainPage : PhoneApplicationPage
     {
-        private IControlConnection Connection { get; set; }
+        private ControlConnection ControlChannel { get; set; }
+        private StatusConnection StatusChannel { get; set; }
+
         // Constructor
         public MainPage()
         {
@@ -36,62 +38,86 @@ namespace DroneControl
             FlightPanel.Visibility = Visibility.Visible;
         }
 
-        private void OnConnectClick(object sender, RoutedEventArgs e)
+        private async void OnConnectClick(object sender, RoutedEventArgs e)
         {
-            if (Connection == null || !Connection.IsConnected)
-            {
-                Connection = new ControlConnection(DroneAddress.Text);
-                Connection.Connect();
+            ConnectDrone(DroneAddress.Text);
+            ShowFlightPanel();
+        }
 
-                ShowFlightPanel();
+        private void OnDisconnectButtonClick(object sender, RoutedEventArgs e)
+        {
+            if (ControlChannel != null && ControlChannel.IsConnected)
+            {
+                ControlChannel.Close();
             }
+
+            if (StatusChannel != null && StatusChannel.IsConnected)
+            {
+                StatusChannel.Close();
+            }
+
+            ShowControlPanel();
         }
 
         private async void OnTakeOffButtonClick(object sender, RoutedEventArgs e)
         {
-            if (!Connection.IsConnected)
+            if (!ControlChannel.IsConnected)
             {
                 return;
             }
 
-            ControlCommand command = new TakeOffCommand(Connection);
+            ControlCommand command = new TakeOffCommand(ControlChannel);
             await command.Execute();
         }
 
         private async void OnLandButtonClick(object sender, RoutedEventArgs e)
         {
-            if (!Connection.IsConnected)
+            if (!ControlChannel.IsConnected)
             {
                 return;
             }
 
-            ControlCommand command = new LandCommand(Connection);
+            ControlCommand command = new LandCommand(ControlChannel);
             await command.Execute();
-        }
-
-        private void OnDisconnectButtonClick(object sender, RoutedEventArgs e)
-        {
-            if (!Connection.IsConnected)
-            {
-                return;
-            }
-
-            Connection.Close();
-
-            ShowControlPanel();
         }
 
         private async void OnEmergencyButtonClick(object sender, RoutedEventArgs e)
         {
-            if (!Connection.IsConnected)
+            if (!ControlChannel.IsConnected)
             {
                 return;
             }
 
-            ControlCommand command = new EmergencyCommand(Connection);
+            ControlCommand command = new EmergencyCommand(ControlChannel);
             await command.Execute();
         }
 
+        private async void ConnectDrone(string address)
+        {
+            ConnectDroneControlChannel(address);
+            ConnectDroneStatusChannel(address);
+        }
+
+        private async void ConnectDroneControlChannel(string address)
+        {
+            ControlChannel = new ControlConnection(address);
+            await ControlChannel.Connect();
+        
+            // Test that the control channel is connected
+            ControlCommand command = new LedCommand(ControlChannel, LedCommand.AnimationType.BlinkGreen, TimeSpan.FromSeconds(1), 5);
+            await command.Execute();
+        }
+
+        private async void ConnectDroneStatusChannel(string address)
+        {
+            StatusChannel = new StatusConnection(address);
+            await StatusChannel.Connect();
+            //await StatusChannel.StartStatusStream();
+
+            // Test that the control channel is connected
+            ControlCommand command = new LedCommand(ControlChannel, LedCommand.AnimationType.BlinkOrange, TimeSpan.FromSeconds(1), 5);
+            await command.Execute();
+        }
 
         // Sample code for building a localized ApplicationBar
         //private void BuildLocalizedApplicationBar()

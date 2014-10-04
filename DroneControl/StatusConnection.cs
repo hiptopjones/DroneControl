@@ -34,9 +34,9 @@ using Windows.Networking.Connectivity;
 
 namespace DroneControl
 {
-    class ControlConnection : IControlConnection
+    class StatusConnection
     {
-        private const int ControlPort = 5556;
+        private const int StatusPort = 5554;
         private UdpConnection TransportConnection { get; set; }
 
         public bool IsConnected
@@ -47,9 +47,10 @@ namespace DroneControl
             }
         }
 
-        public ControlConnection(string ipAddress)
+        public StatusConnection(string ipAddress)
         {
-            TransportConnection = new UdpConnection(ipAddress, ControlPort);
+            TransportConnection = new UdpConnection(ipAddress, StatusPort);
+            TransportConnection.MessageReceivedHandler = OnMessageReceived;
         }
 
         public async Task Connect()
@@ -57,16 +58,25 @@ namespace DroneControl
             await TransportConnection.Connect();
         }
 
-        public async Task SendCommand(string command)
+        public async Task StartStatusStream()
         {
-            // These commands are ASCII, so UTF8 suffices
-            byte[] bytes = Encoding.UTF8.GetBytes(command);
+            await SendKeepAlive();
+        }
+
+        public async Task SendKeepAlive()
+        {
+            byte[] bytes = BitConverter.GetBytes(1);
             await TransportConnection.Send(bytes);
         }
 
         public void Close()
         {
             TransportConnection.Close();
+        }
+
+        private void OnMessageReceived(byte[] buffer)
+        {
+            Console.WriteLine("Status info received from drone: {0} bytes", buffer.Length);
         }
     }
 }
