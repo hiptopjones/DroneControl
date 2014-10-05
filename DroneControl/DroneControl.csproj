@@ -94,7 +94,11 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="AtCommandBuilder.cs" />
+    <Compile Include="Commands\TrimCommand.cs" />
     <Compile Include="Commands\ConfigCommand.cs" />
+    <Compile Include="Commands\HoverCommand.cs" />
+    <Compile Include="Commands\TranslateCommand.cs" />
+    <Compile Include="Commands\RotateCommand.cs" />
     <Compile Include="Commands\LedCommand.cs" />
     <Compile Include="Commands\EmergencyCommand.cs" />
     <Compile Include="Commands\LandCommand.cs" />

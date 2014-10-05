@@ -9,6 +9,8 @@ using Microsoft.Phone.Controls;
 using Microsoft.Phone.Shell;
 using DroneControl.Resources;
 using DroneControl.Commands;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace DroneControl
 {
@@ -24,9 +26,11 @@ namespace DroneControl
 
             // Sample code to localize the ApplicationBar
             //BuildLocalizedApplicationBar();
+
+            ShowConnectionPanel();
         }
 
-        private void ShowControlPanel()
+        private void ShowConnectionPanel()
         {
             ConnectionPanel.Visibility = Visibility.Visible;
             FlightPanel.Visibility = Visibility.Collapsed;
@@ -40,7 +44,9 @@ namespace DroneControl
 
         private async void OnConnectClick(object sender, RoutedEventArgs e)
         {
-            ConnectDrone(DroneAddress.Text);
+            await ConnectDrone(DroneAddress.Text);
+
+            AcknowledgeCommand();
             ShowFlightPanel();
         }
 
@@ -56,65 +62,104 @@ namespace DroneControl
                 StatusChannel.Close();
             }
 
-            ShowControlPanel();
+            ShowConnectionPanel();
         }
 
         private async void OnTakeOffButtonClick(object sender, RoutedEventArgs e)
         {
-            if (!ControlChannel.IsConnected)
-            {
-                return;
-            }
-
             ControlCommand command = new TakeOffCommand(ControlChannel);
             await command.Execute();
         }
 
         private async void OnLandButtonClick(object sender, RoutedEventArgs e)
         {
-            if (!ControlChannel.IsConnected)
-            {
-                return;
-            }
-
             ControlCommand command = new LandCommand(ControlChannel);
             await command.Execute();
         }
 
         private async void OnEmergencyButtonClick(object sender, RoutedEventArgs e)
         {
-            if (!ControlChannel.IsConnected)
-            {
-                return;
-            }
-
             ControlCommand command = new EmergencyCommand(ControlChannel);
             await command.Execute();
         }
 
-        private async void ConnectDrone(string address)
+        private async Task ConnectDrone(string address)
         {
-            ConnectDroneControlChannel(address);
-            ConnectDroneStatusChannel(address);
+            await ConnectDroneControlChannel(address);
+            //await ConnectDroneStatusChannel(address);
         }
 
-        private async void ConnectDroneControlChannel(string address)
+        private async Task ConnectDroneControlChannel(string address)
         {
             ControlChannel = new ControlConnection(address);
             await ControlChannel.Connect();
-        
-            // Test that the control channel is connected
-            ControlCommand command = new LedCommand(ControlChannel, LedCommand.AnimationType.BlinkGreen, TimeSpan.FromSeconds(1), 5);
-            await command.Execute();
         }
 
-        private async void ConnectDroneStatusChannel(string address)
+        private async Task ConnectDroneStatusChannel(string address)
         {
             StatusChannel = new StatusConnection(address);
             await StatusChannel.Connect();
-            //await StatusChannel.StartStatusStream();
+            await StatusChannel.StartStatusStream();
+        }
 
-            // Test that the control channel is connected
+        private async void OnRotateLeftButtonClick(object sender, RoutedEventArgs e)
+        {
+            ControlCommand command = new RotateCommand(ControlChannel, -1);
+            await command.Execute();
+        }
+
+        private async void OnRotateRightButtonClick(object sender, RoutedEventArgs e)
+        {
+            ControlCommand command = new RotateCommand(ControlChannel, 1);
+            await command.Execute();
+        }
+
+        private async void OnForwardButtonClick(object sender, RoutedEventArgs e)
+        {
+            ControlCommand command = new TranslateCommand(ControlChannel, 0, -1, 0);
+            await command.Execute();
+        }
+
+        private async void OnBackwardButtonClick(object sender, RoutedEventArgs e)
+        {
+            ControlCommand command = new TranslateCommand(ControlChannel, 0, 1, 0);
+            await command.Execute();
+        }
+
+        private async void OnLeftButtonClick(object sender, RoutedEventArgs e)
+        {
+            ControlCommand command = new TranslateCommand(ControlChannel, -1, 0, 0);
+            await command.Execute();
+        }
+
+        private async void OnRightButtonClick(object sender, RoutedEventArgs e)
+        {
+            ControlCommand command = new TranslateCommand(ControlChannel, 1, 0, 0);
+            await command.Execute();
+        }
+
+        private async void OnUpButtonClick(object sender, RoutedEventArgs e)
+        {
+            ControlCommand command = new TranslateCommand(ControlChannel, 0, 0, 1);
+            await command.Execute();
+        }
+
+        private async void OnDownButtonClick(object sender, RoutedEventArgs e)
+        {
+            ControlCommand command = new TranslateCommand(ControlChannel, 0, 0, -1);
+            await command.Execute();
+        }
+
+        private async void OnTrimButtonClick(object sender, RoutedEventArgs e)
+        {
+            ControlCommand command = new TrimCommand(ControlChannel);
+            await command.Execute();
+
+            AcknowledgeCommand();
+        }
+
+        private async void AcknowledgeCommand()
+        {
             ControlCommand command = new LedCommand(ControlChannel, LedCommand.AnimationType.BlinkOrange, TimeSpan.FromSeconds(1), 5);
             await command.Execute();
         }
